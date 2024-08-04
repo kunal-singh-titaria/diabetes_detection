@@ -1,0 +1,78 @@
+import pandas as pd
+import numpy as np
+
+# Load the dataset
+data = pd.read_csv('diabetes-dataset.csv')
+
+# Handling missing values
+data[['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']] = data[
+    ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']].replace(0, np.nan)
+
+data['Glucose'] = data['Glucose'].replace(0, data['Glucose'].mean())
+data['BloodPressure'] = data['BloodPressure'].replace(0, data['BloodPressure'].mean())
+data['SkinThickness'] = data['SkinThickness'].replace(0, data['SkinThickness'].mean())
+data['Insulin'] = data['Insulin'].replace(0, data['Insulin'].mean())
+data['BMI'] = data['BMI'].replace(0, data['BMI'].mean())
+
+# Split the data into features (X) and target (y)
+X = data.drop('Outcome', axis=1)
+y = data['Outcome']
+
+# Implement logistic regression from scratch
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def initialize_params(dim):
+    theta = np.zeros((dim, 1))
+    return theta
+
+def cost_function(X, y, theta):
+    m = len(y)
+    h = sigmoid(X @ theta)
+    epsilon = 1e-5  # Small constant to prevent log(0)
+    cost = (1 / m) * (-y.T @ np.log(h + epsilon) - (1 - y).T @ np.log(1 - h + epsilon))
+    return cost
+
+def gradient_descent(X, y, theta, alpha, num_iterations):
+    m = len(y)
+    cost_history = []
+    
+    for _ in range(num_iterations):
+        h = sigmoid(X @ theta)
+        gradient = X.T @ (h - y) / m
+        theta -= alpha * gradient
+        cost = cost_function(X, y, theta)
+        cost_history.append(cost)
+    
+    return theta, cost_history
+
+# Add a column of ones for the bias term
+X = np.c_[np.ones((X.shape[0], 1)), X]
+
+# Initialize parameters and hyperparameters
+theta = initialize_params(X.shape[1])
+alpha = 0.01
+num_iterations = 1000
+
+# Perform gradient descent to train the logistic regression model
+optimal_theta, cost_history = gradient_descent(X, y.values.reshape(-1, 1), theta, alpha, num_iterations)
+
+# Function to make predictions
+def predict(X, theta):
+    probabilities = sigmoid(X @ theta)
+    return (probabilities >= 0.5).astype(int)
+
+# Split the data into train and test sets
+split_ratio = 0.8
+split_index = int(split_ratio * len(data))
+
+X_train, y_train = X[:split_index], y[:split_index]
+X_test, y_test = X[split_index:], y[split_index:]
+
+# Make predictions on the test set
+y_pred = predict(X_test, optimal_theta)
+
+# Calculate accuracy
+accuracy = np.mean(y_pred == y_test.values.reshape(-1, 1)) * 100
+print(f"Logistic Regression Test Accuracy: {accuracy:.2f}%")
+

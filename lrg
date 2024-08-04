@@ -1,0 +1,176 @@
+import pandas as pd
+import numpy as np
+
+# Load the dataset
+data = pd.read_csv('diabetes-dataset.csv')
+
+# Handling missing values
+data[['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']] = data[
+    ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']].replace(0, np.nan)
+
+data['Glucose'] = data['Glucose'].replace(0, data['Glucose'].mean())
+data['BloodPressure'] = data['BloodPressure'].replace(0, data['BloodPressure'].mean())
+data['SkinThickness'] = data['SkinThickness'].replace(0, data['SkinThickness'].mean())
+data['Insulin'] = data['Insulin'].replace(0, data['Insulin'].mean())
+data['BMI'] = data['BMI'].replace(0, data['BMI'].mean())
+
+# Split the data into features (X) and target (y)
+X = data.drop('Outcome', axis=1)
+y = data['Outcome']
+
+# Implement logistic regression from scratch
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def initialize_params(dim):
+    theta = np.zeros((dim, 1))
+    return theta
+
+def cost_function(X, y, theta):
+    m = len(y)
+    h = sigmoid(X @ theta)
+    epsilon = 1e-5  # Small constant to prevent log(0)
+    cost = (1 / m) * (-y.T @ np.log(h + epsilon) - (1 - y).T @ np.log(1 - h + epsilon))
+    return cost
+
+def gradient_descent(X, y, theta, alpha, num_iterations):
+    m = len(y)
+    cost_history = []
+    
+    for _ in range(num_iterations):
+        h = sigmoid(X @ theta)
+        gradient = X.T @ (h - y) / m
+        theta -= alpha * gradient
+        cost = cost_function(X, y, theta)
+        cost_history.append(cost)
+    
+    return theta, cost_history
+
+# Add a column of ones for the bias term
+X = np.c_[np.ones((X.shape[0], 1)), X]
+
+# Initialize parameters and hyperparameters
+theta = initialize_params(X.shape[1])
+alpha = 0.01
+num_iterations = 1000
+
+# Perform gradient descent to train the logistic regression model
+optimal_theta, cost_history = gradient_descent(X, y.values.reshape(-1, 1), theta, alpha, num_iterations)
+
+# Function to make predictions
+def predict(X, theta):
+    probabilities = sigmoid(X @ theta)
+    return (probabilities >= 0.5).astype(int)
+
+# Split the data into train and test sets
+split_ratio = 0.8
+split_index = int(split_ratio * len(data))
+
+X_train, y_train = X[:split_index], y[:split_index]
+X_test, y_test = X[split_index:], y[split_index:]
+
+# Make predictions on the test set
+y_pred = predict(X_test, optimal_theta)
+
+# Calculate accuracy
+accuracy = np.mean(y_pred == y_test.values.reshape(-1, 1)) * 100
+print(f"Logistic Regression Test Accuracy: {accuracy:.2f}%")
+
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Histogram of a numerical feature
+plt.figure(figsize=(8, 6))
+sns.histplot(data['Glucose'], bins=10, kde=True)
+plt.xlabel('Glucose')
+plt.ylabel('Count')
+plt.title('Distribution of Glucose')
+plt.show()
+
+# Bar plot of a categorical feature
+plt.figure(figsize=(8, 6))
+sns.countplot(data['Outcome'])
+plt.xlabel('Outcome')
+plt.ylabel('Count')
+plt.title('Distribution of Outcome')
+plt.show()
+
+# Correlation matrix
+plt.figure(figsize=(10, 8))
+sns.heatmap(data.corr(), annot=True, cmap='RdYlBu')
+plt.title('Correlation Matrix')
+plt.show()
+
+# Scatter plot of two numerical features
+
+from sklearn.model_selection import train_test_split
+X_train,X_test,y_train,y_test=train_test_split(X,y,test_size=0.20,
+                                               random_state=42)
+from sklearn.preprocessing import StandardScaler
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+
+from sklearn.pipeline import Pipeline
+pipeline_lr  = Pipeline([('scalar1',StandardScaler()),
+                         ('lr_classifier',LogisticRegression())])
+
+pipeline_knn = Pipeline([('scalar2',StandardScaler()),
+                          ('knn_classifier',KNeighborsClassifier())])
+
+pipeline_svc = Pipeline([('scalar3',StandardScaler()),
+                         ('svc_classifier',SVC())])
+pipeline_rf = Pipeline([('rf_classifier',RandomForestClassifier(max_depth=9))])
+pipeline_gbc = Pipeline([('gbc_classifier',GradientBoostingClassifier())])
+pipelines = [pipeline_lr,
+            pipeline_knn,
+            pipeline_svc,
+            pipeline_rf,
+            pipeline_gbc]
+pipelines
+
+for pipe in pipelines:
+    pipe.fit(X_train,y_train)
+
+pipe_dict = {0:'LR',
+             1:'KNN',
+             2:'SVC',
+             3: 'RF',
+             4: 'GBC'}
+pipe_dict
+
+for i,model in enumerate(pipelines):
+    print("{} Test Accuracy:{}".format(pipe_dict[i],model.score(X_test,y_test)*100))
+
+from sklearn.ensemble import RandomForestClassifier
+X = data.drop('Outcome',axis=1)
+y = data['Outcome']
+rf =RandomForestClassifier(max_depth=3)
+rf.fit(X,y)
+"""Prediction on New DATA"""
+new_data = pd.DataFrame({
+    'Pregnancies':6,
+    'Glucose':148.0,
+    'BloodPressure':72.0,
+    'SkinThickness':35.0,
+    'Insulin':79.799479,
+    'BMI':33.6,
+    'DiabetesPedigreeFunction':0.627,
+    'Age':50,    
+},index=[0])
+
+p = rf.predict(new_data)
+if p[0] == 0:
+    print('non-diabetic')
+else:
+    print('diabetic')
+
+"""Save Model Using Joblib"""
+import joblib
+joblib.dump(rf,'model_joblib_diabetes')
+model = joblib.load('model_joblib_diabetes')
+model.predict(new_data)
